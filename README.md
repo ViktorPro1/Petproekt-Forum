@@ -2,30 +2,32 @@
 
 ## Структура папок
 
+```
 forum/
-├── forum-frontend/ # React фронтенд
-│ ├── src/
-│ │ ├── components/
-│ │ │ ├── Register.js # Форма реєстрації
-│ │ │ ├── Login.js # Форма логіну
-│ │ │ ├── PostList.js # Список постів з вибором активного
-│ │ │ ├── PostForm.js # Створення нового посту
-│ │ │ ├── CommentList.js # Список коментарів для посту
-│ │ │ └── CommentForm.js # Форма додавання коментаря
-│ │ └── App.js # Головний компонент React
-│ └── package.json
-└── forum-backend/ # Node.js + Express бекенд
-├── routes/
-│ ├── auth.js # Маршрути /register, /login
-│ ├── posts.js # Маршрути для постів
-│ └── comments.js # Маршрути для коментарів
-├── controllers/
-│ └── authController.js # Логіка реєстрації та логіну
-├── middleware/
-│ └── auth.js # Перевірка JWT токена
-├── config/
-│ └── db.js # Налаштування MySQL з'єднання
-└── package.json
+├── forum-frontend/                # React фронтенд
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── Register.js       # Форма реєстрації
+│   │   │   ├── Login.js          # Форма логіну
+│   │   │   ├── PostList.js       # Список постів з вибором активного
+│   │   │   ├── PostForm.js       # Створення нового посту
+│   │   │   ├── CommentList.js    # Список коментарів для посту
+│   │   │   └── CommentForm.js    # Форма додавання коментаря
+│   │   └── App.js                # Головний компонент React
+│   └── package.json
+└── forum-backend/                 # Node.js + Express бекенд
+    ├── routes/
+    │   ├── auth.js               # Маршрути /register, /login
+    │   ├── posts.js              # Маршрути для постів
+    │   └── comments.js           # Маршрути для коментарів
+    ├── controllers/
+    │   └── authController.js     # Логіка реєстрації та логіну
+    ├── middleware/
+    │   └── auth.js               # Перевірка JWT токена
+    ├── config/
+    │   └── db.js                 # Налаштування MySQL з'єднання
+    └── package.json
+```
 
 ## Функціонал проекту
 
