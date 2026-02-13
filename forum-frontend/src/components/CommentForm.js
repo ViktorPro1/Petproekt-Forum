@@ -42,38 +42,43 @@ function CommentForm({ token, postId, onCommentAdded }) {
     };
 
     return (
-        <form onSubmit={handleSubmit} style={{ marginTop: "10px" }}>
-            <textarea
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                placeholder="Ваш коментар"
-                rows={3}
-                style={{
-                    width: "100%",
-                    padding: "8px",
-                    borderRadius: "4px",
-                    border: "1px solid #ccc",
-                    resize: "vertical",
-                }}
-            />
-            <br />
-            <button
-                type="submit"
-                disabled={loading}
-                style={{
-                    marginTop: "5px",
-                    padding: "6px 12px",
-                    borderRadius: "4px",
-                    border: "none",
-                    backgroundColor: "#4CAF50",
-                    color: "white",
-                    cursor: loading ? "not-allowed" : "pointer",
-                }}
-            >
-                {loading ? "Відправка..." : "Додати коментар"}
-            </button>
-            {error && <p style={{ color: "red", marginTop: "5px" }}>{error}</p>}
-        </form>
+        <div className="card-gradient rounded-2xl p-6 shadow-xl">
+            <h3 className="text-xl font-bold gradient-text mb-4">Додати коментар</h3>
+
+            {error && (
+                <div className="mb-4 p-3 bg-red-50 border-l-4 border-red-500 rounded-lg">
+                    <p className="text-red-700 text-sm font-medium">{error}</p>
+                </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+                <textarea
+                    value={content}
+                    onChange={(e) => setContent(e.target.value)}
+                    placeholder="Ваш коментар..."
+                    rows={3}
+                    className="input-field min-h-[100px] resize-none"
+                />
+
+                <button
+                    type="submit"
+                    disabled={loading}
+                    className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    {loading ? (
+                        <div className="flex items-center justify-center">
+                            <svg className="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                            </svg>
+                            Відправка...
+                        </div>
+                    ) : (
+                        'Додати коментар'
+                    )}
+                </button>
+            </form>
+        </div>
     );
 }
 
