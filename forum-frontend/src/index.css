@@ -3,12 +3,22 @@
 @tailwind utilities;
 
 @layer base {
-  body {@apply bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 min-h-screen;}
+  body {
+    @apply bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 min-h-screen;
+  }
 }
 
 @layer components {
-  .gradient-text {@apply bg-clip-text text-transparent bg-gradient-to-r from-primary-600 via-accent-500 to-pink-500;}
-  .card-gradient {@apply bg-gradient-to-br from-white to-blue-50/50 border border-blue-100/50 shadow-lg;}
-  .btn-primary {@apply bg-gradient-to-r from-primary-500 to-accent-500 text-white font-semibold px-6 py-3 rounded-xl hover:shadow-lg transition-all;}
-  .input-field {@apply w-full px-4 py-3 rounded-xl border-2 border-blue-100 focus:border-primary-400 focus:ring-4 focus:ring-primary-100 outline-none transition-all bg-white/80;}
+  .gradient-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary-600 via-accent-500 to-pink-500;
+  }
+  .card-gradient {
+    @apply bg-gradient-to-br from-white to-blue-50/50 border border-blue-100/50 shadow-lg;
+  }
+  .btn-primary {
+    @apply bg-gradient-to-r from-primary-500 to-accent-500 text-white font-semibold px-6 py-3 rounded-xl hover:shadow-lg transition-all;
+  }
+  .input-field {
+    @apply w-full px-4 py-3 rounded-xl border-2 border-blue-100 focus:border-primary-400 focus:ring-4 focus:ring-primary-100 outline-none transition-all bg-white/80;
+  }
 }
