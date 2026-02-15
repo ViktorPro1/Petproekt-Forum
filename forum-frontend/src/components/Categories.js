@@ -19,37 +19,59 @@ function Categories({ onSelectCategory }) {
     };
 
     const handleCategoryAdded = () => {
-        setReload(prev => prev + 1); // Оновити список категорій
+        setReload(prev => prev + 1);
     };
 
     return (
-        <div className="space-y-4">
-            <h2 className="text-xl font-bold mb-2">Категорії</h2>
+        <div className="space-y-3">
+            <div className="flex items-center justify-between mb-2">
+                <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--text-tertiary)]">
+                    Категорії
+                </h2>
+            </div>
 
-            {/* Форма додавання категорії */}
+            {/* Add category form */}
             <CategoryForm onCategoryAdded={handleCategoryAdded} />
 
-            {/* Список категорій */}
-            <div className="space-y-2">
+            {/* Categories list */}
+            <div className="space-y-1">
                 {categories.length === 0 ? (
-                    <div className="text-center py-8 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl">
-                        <p className="text-gray-500 font-medium">Категорій поки немає</p>
-                        <p className="text-sm text-gray-400 mt-1">Створіть першу категорію</p>
+                    <div className="card p-6 text-center animate-fade-in">
+                        <p className="text-sm text-[var(--text-secondary)]">Категорій поки немає</p>
+                        <p className="text-xs text-[var(--text-tertiary)] mt-1">Створіть першу</p>
                     </div>
                 ) : (
                     categories.map(cat => (
                         <button
                             key={cat.id}
                             onClick={() => handleClick(cat)}
-                            className={`w-full text-left px-4 py-2 rounded-xl transition-all duration-300 ${selectedId === cat.id
-                                ? "bg-gradient-to-r from-primary-500 to-accent-500 text-white shadow-lg"
-                                : "bg-white text-gray-700 hover:bg-gray-100"
-                                }`}
+                            className={`
+                                w-full text-left px-3 py-2.5 rounded-lg transition-all duration-200 group
+                                ${selectedId === cat.id
+                                    ? "bg-[var(--accent-primary)] text-white shadow-md"
+                                    : "text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]"
+                                }
+                            `}
                         >
-                            <p className="font-semibold">{cat.name}</p>
-                            <p className={`text-sm ${selectedId === cat.id ? "text-white/80" : "text-gray-400"}`}>
-                                {cat.description || "Без опису"}
-                            </p>
+                            <div className="flex items-center gap-3">
+                                <div className={`
+                                    w-2 h-2 rounded-full transition-all
+                                    ${selectedId === cat.id ? "bg-white" : "bg-[var(--text-tertiary)] group-hover:bg-[var(--accent-primary)]"}
+                                `}></div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="font-semibold text-sm truncate">
+                                        {cat.name}
+                                    </p>
+                                    {cat.description && (
+                                        <p className={`
+                                            text-xs truncate mt-0.5
+                                            ${selectedId === cat.id ? "text-white/70" : "text-[var(--text-tertiary)]"}
+                                        `}>
+                                            {cat.description}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
                         </button>
                     ))
                 )}

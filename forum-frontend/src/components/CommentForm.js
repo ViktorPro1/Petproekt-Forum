@@ -30,8 +30,8 @@ function CommentForm({ token, postId, onCommentAdded }) {
             if (!res.ok) {
                 setError(data.message || "Помилка при додаванні коментаря");
             } else {
-                setContent(""); // очистити поле
-                onCommentAdded(); // сигналізує App про оновлення CommentList
+                setContent("");
+                onCommentAdded();
             }
         } catch (err) {
             console.error("Помилка при запиті до сервера:", err);
@@ -42,22 +42,22 @@ function CommentForm({ token, postId, onCommentAdded }) {
     };
 
     return (
-        <div className="card-gradient rounded-2xl p-6 shadow-xl">
-            <h3 className="text-xl font-bold gradient-text mb-4">Додати коментар</h3>
+        <div className="card p-4 animate-scale-in">
+            <h3 className="font-bold text-[var(--text-primary)] mb-3">Додати коментар</h3>
 
             {error && (
-                <div className="mb-4 p-3 bg-red-50 border-l-4 border-red-500 rounded-lg">
-                    <p className="text-red-700 text-sm font-medium">{error}</p>
+                <div className="mb-3 p-2 rounded-lg text-xs font-medium bg-[var(--danger)]/10 text-[var(--danger)] border border-[var(--danger)]/20">
+                    {error}
                 </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-3">
                 <textarea
                     value={content}
                     onChange={(e) => setContent(e.target.value)}
-                    placeholder="Ваш коментар..."
+                    placeholder="Поділіться своєю думкою..."
                     rows={3}
-                    className="input-field min-h-[100px] resize-none"
+                    className="input-field !py-2 text-sm resize-none"
                 />
 
                 <button
@@ -66,8 +66,8 @@ function CommentForm({ token, postId, onCommentAdded }) {
                     className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     {loading ? (
-                        <div className="flex items-center justify-center">
-                            <svg className="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24">
+                        <div className="flex items-center justify-center gap-2">
+                            <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
                                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                             </svg>
