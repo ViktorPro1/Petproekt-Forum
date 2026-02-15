@@ -74,11 +74,13 @@ function CommentList({ postId, reload }) {
                     >
                         <div className="flex items-start space-x-3">
                             <div className="w-8 h-8 bg-gradient-to-br from-primary-400 to-accent-400 rounded-full flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
-                                {c.user_id}
+                                {c.username ? c.username.charAt(0).toUpperCase() : '?'}
                             </div>
                             <div className="flex-1">
                                 <div className="flex items-center justify-between mb-1">
-                                    <span className="font-semibold text-gray-700">Користувач {c.user_id}</span>
+                                    <span className="font-semibold text-gray-700">
+                                        {c.username || 'Анонім'}
+                                    </span>
                                     <span className="text-xs text-gray-500">
                                         {new Date(c.created_at).toLocaleString('uk-UA')}
                                     </span>

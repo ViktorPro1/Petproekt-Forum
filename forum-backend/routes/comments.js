@@ -3,11 +3,15 @@ const router = express.Router();
 const db = require("../config/db");
 const authMiddleware = require("../middleware/auth");
 
-// Отримати коментарі до посту (публічно)
+// Отримати коментарі до посту (публічно) + ім'я користувача
 router.get("/:post_id", (req, res) => {
     const { post_id } = req.params;
     db.query(
-        "SELECT * FROM comments WHERE post_id = ?",
+        `SELECT comments.*, users.username 
+         FROM comments 
+         LEFT JOIN users ON comments.user_id = users.id 
+         WHERE comments.post_id = ? 
+         ORDER BY comments.created_at DESC`,
         [post_id],
         (err, results) => {
             if (err) return res.status(500).json({ message: err });
