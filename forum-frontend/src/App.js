@@ -61,7 +61,7 @@ function App() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
               </svg>
             </div>
-            <h1 className="text-4xl font-bold gradient-text mb-2">Господарство онлайн</h1>
+            <h1 className="text-4xl font-bold gradient-text mb-2">DigitalFlow</h1>
             <p className="text-[var(--text-secondary)]">Приєднуйтесь до спільноти</p>
           </div>
 
@@ -179,7 +179,7 @@ function App() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                 </svg>
               </div>
-              <h1 className="text-xl font-bold gradient-text hidden sm:block">Господарство онлайн</h1>
+              <h1 className="text-xl font-bold gradient-text hidden sm:block">DigitalFlow</h1>
             </div>
           </div>
 
@@ -352,8 +352,8 @@ function App() {
                 </svg>
               </div>
               <div>
-                <p className="font-bold text-[var(--text-primary)]">Господарство онлайн</p>
-                <p className="text-xs text-[var(--text-tertiary)]">Сучасна платформа для обговорень</p>
+                <p className="font-bold text-[var(--text-primary)]">DigitalFlow</p>
+                <p className="text-xs text-[var(--text-tertiary)]">Українська спільнота спеціалістів з розробки, дизайну та маркетингу для обміну досвідом і професійного розвитку.</p>
               </div>
             </div>
 
