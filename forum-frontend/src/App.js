@@ -29,6 +29,7 @@ function App() {
 
   const handleLogout = () => {
     localStorage.removeItem("token");
+    localStorage.removeItem("userRole");
     setToken("");
     setSelectedPost(null);
     setSelectedCategory(null);
@@ -286,6 +287,7 @@ function App() {
               selectedPost={selectedPost}
               onSelectPost={setSelectedPost}
               categoryId={selectedCategory}
+              token={token}
             />
           </div>
         </main>
@@ -303,6 +305,7 @@ function App() {
                 <CommentList
                   postId={selectedPost}
                   reload={reloadComments}
+                  token={token}
                 />
               </>
             ) : (
@@ -356,8 +359,7 @@ function App() {
 
             <div className="text-center md:text-right">
               <p className="text-sm text-[var(--text-secondary)]">
-                © 2026 Господарство онлайн.<br />
-                Всі права захищені.
+                © Всі права захищені.
               </p>
               <p className="text-xs text-[var(--text-tertiary)] mt-1">
                 Зроблено з ❤️ в Україні

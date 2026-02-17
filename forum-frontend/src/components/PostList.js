@@ -1,8 +1,15 @@
 import { useState, useEffect, useCallback } from "react";
 
-function PostList({ categoryId, reload, selectedPost, onSelectPost }) {
+function PostList({ categoryId, reload, selectedPost, onSelectPost, token }) {
     const [posts, setPosts] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [userRole, setUserRole] = useState("user");
+    const [deleteHovered, setDeleteHovered] = useState(null);
+
+    useEffect(() => {
+        const role = localStorage.getItem("userRole") || "user";
+        setUserRole(role);
+    }, []);
 
     const fetchPosts = useCallback(async () => {
         if (!categoryId) return;
@@ -26,7 +33,87 @@ function PostList({ categoryId, reload, selectedPost, onSelectPost }) {
         fetchPosts();
     }, [fetchPosts, reload]);
 
-    // No category selected
+    const handleDeletePost = async (postId, e) => {
+        e.stopPropagation();
+
+        if (!window.confirm("Ви впевнені що хочете видалити цей пост?")) {
+            return;
+        }
+
+        try {
+            const res = await fetch(`http://localhost:5000/api/posts/${postId}`, {
+                method: "DELETE",
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+
+            const data = await res.json();
+
+            if (res.ok) {
+                setPosts(posts.filter(p => p.id !== postId));
+                if (selectedPost === postId) {
+                    onSelectPost(null);
+                }
+            } else {
+                alert(data.message || "Помилка при видаленні поста");
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Помилка при видаленні поста");
+        }
+    };
+
+    // Функція для отримання бейджа ролі
+    const getRoleBadge = (role) => {
+        if (role === 'admin') {
+            return (
+                <span style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '2px 8px',
+                    borderRadius: '6px',
+                    background: 'linear-gradient(135deg, #dc2626, #ef4444)',
+                    color: 'white',
+                    fontSize: '10px',
+                    fontWeight: '700',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
+                }}>
+                    <svg style={{ width: '12px', height: '12px' }} fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M9.504 1.132a1 1 0 01.992 0l1.75 1a1 1 0 11-.992 1.736L10 3.152l-1.254.716a1 1 0 11-.992-1.736l1.75-1zM5.618 4.504a1 1 0 01-.372 1.364L5.016 6l.23.132a1 1 0 11-.992 1.736L4 7.723V8a1 1 0 01-2 0V6a.996.996 0 01.52-.878l1.734-.99a1 1 0 011.364.372zm8.764 0a1 1 0 011.364-.372l1.733.99A1.002 1.002 0 0118 6v2a1 1 0 11-2 0v-.277l-.254.145a1 1 0 11-.992-1.736l.23-.132-.23-.132a1 1 0 01-.372-1.364zm-7 4a1 1 0 011.364-.372L10 8.848l1.254-.716a1 1 0 11.992 1.736L11 10.58V12a1 1 0 11-2 0v-1.42l-1.246-.712a1 1 0 01-.372-1.364zM3 11a1 1 0 011 1v1.42l1.246.712a1 1 0 11-.992 1.736l-1.75-1A1 1 0 012 14v-2a1 1 0 011-1zm14 0a1 1 0 011 1v2a1 1 0 01-.504.868l-1.75 1a1 1 0 11-.992-1.736L16 13.42V12a1 1 0 011-1zm-9.618 5.504a1 1 0 011.364-.372l.254.145V16a1 1 0 112 0v.277l.254-.145a1 1 0 11.992 1.736l-1.735.992a.995.995 0 01-1.022 0l-1.735-.992a1 1 0 01-.372-1.364z" clipRule="evenodd" />
+                    </svg>
+                    АДМІН
+                </span>
+            );
+        } else if (role === 'moderator') {
+            return (
+                <span style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '2px 8px',
+                    borderRadius: '6px',
+                    background: 'linear-gradient(135deg, #0969da, #1f6feb)',
+                    color: 'white',
+                    fontSize: '10px',
+                    fontWeight: '700',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
+                }}>
+                    <svg style={{ width: '12px', height: '12px' }} fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                    МОД
+                </span>
+            );
+        }
+        return null;
+    };
+
+    const canModerate = userRole === 'admin' || userRole === 'moderator';
+
     if (!categoryId) {
         return (
             <div className="card p-16 text-center animate-fade-in">
@@ -45,7 +132,6 @@ function PostList({ categoryId, reload, selectedPost, onSelectPost }) {
         );
     }
 
-    // Loading state
     if (loading) {
         return (
             <div className="space-y-4">
@@ -65,7 +151,6 @@ function PostList({ categoryId, reload, selectedPost, onSelectPost }) {
         );
     }
 
-    // Empty state
     if (posts.length === 0) {
         return (
             <div className="card p-16 text-center animate-fade-in">
@@ -92,26 +177,55 @@ function PostList({ categoryId, reload, selectedPost, onSelectPost }) {
                     onClick={() => onSelectPost(post.id)}
                     style={{ animationDelay: `${index * 50}ms` }}
                     className={`
-                        card-hover cursor-pointer p-5 animate-slide-up
+                        card-hover cursor-pointer p-5 animate-slide-up relative
                         ${selectedPost === post.id
                             ? "ring-2 ring-[var(--accent-primary)] bg-[var(--accent-primary)]/5"
                             : ""
                         }
                     `}
                 >
-                    {/* Header */}
+                    {canModerate && (
+                        <button
+                            onClick={(e) => handleDeletePost(post.id, e)}
+                            onMouseEnter={() => setDeleteHovered(post.id)}
+                            onMouseLeave={() => setDeleteHovered(null)}
+                            style={{
+                                position: 'absolute',
+                                top: '12px',
+                                right: '12px',
+                                width: '32px',
+                                height: '32px',
+                                borderRadius: '8px',
+                                background: deleteHovered === post.id ? '#fee' : '#fef2f2',
+                                border: '1px solid ' + (deleteHovered === post.id ? '#f87171' : '#fecaca'),
+                                color: deleteHovered === post.id ? '#dc2626' : '#ef4444',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                zIndex: 10,
+                            }}
+                            title="Видалити пост"
+                        >
+                            <svg style={{ width: '16px', height: '16px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                        </button>
+                    )}
+
                     <div className="flex items-start gap-3 mb-3">
-                        {/* Avatar */}
                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--accent-primary)] to-[var(--accent-tertiary)] flex items-center justify-center text-white font-bold text-sm flex-shrink-0 shadow-sm">
                             {post.username ? post.username.charAt(0).toUpperCase() : '?'}
                         </div>
 
-                        {/* Meta info */}
                         <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
                                 <span className="font-semibold text-[var(--text-primary)] text-sm">
                                     {post.username || 'Анонім'}
                                 </span>
+                                {/* РОЛЬ БЕЙДЖ */}
+                                {getRoleBadge(post.role)}
                                 <span className="text-xs text-[var(--text-tertiary)]">•</span>
                                 <time className="text-xs text-[var(--text-tertiary)]">
                                     {new Date(post.created_at).toLocaleDateString('uk-UA', {
@@ -124,13 +238,11 @@ function PostList({ categoryId, reload, selectedPost, onSelectPost }) {
                             </div>
                         </div>
 
-                        {/* Selected badge */}
                         {selectedPost === post.id && (
                             <span className="badge badge-primary">Вибрано</span>
                         )}
                     </div>
 
-                    {/* Content */}
                     <div className="space-y-2">
                         <h3 className="font-bold text-[var(--text-primary)] text-lg leading-snug">
                             {post.title}
@@ -140,7 +252,6 @@ function PostList({ categoryId, reload, selectedPost, onSelectPost }) {
                         </p>
                     </div>
 
-                    {/* Footer */}
                     <div className="flex items-center gap-4 mt-4 pt-3 border-t border-[var(--border-secondary)]">
                         <button
                             className="btn-ghost !p-0 text-xs flex items-center gap-1.5 text-[var(--text-tertiary)] hover:text-[var(--accent-primary)]"

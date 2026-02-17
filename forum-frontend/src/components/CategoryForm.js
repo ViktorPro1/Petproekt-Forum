@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 function CategoryForm({ onCategoryAdded }) {
     const [name, setName] = useState("");
@@ -8,6 +8,13 @@ function CategoryForm({ onCategoryAdded }) {
     const [showForm, setShowForm] = useState(false);
     const [addHovered, setAddHovered] = useState(false);
     const [submitHovered, setSubmitHovered] = useState(false);
+    const [userRole, setUserRole] = useState("user");
+
+    useEffect(() => {
+        // Перевіряємо роль користувача
+        const role = localStorage.getItem("userRole") || "user";
+        setUserRole(role);
+    }, []);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -17,14 +24,23 @@ function CategoryForm({ onCategoryAdded }) {
             return;
         }
 
+        // Додаткова перевірка на клієнті
+        if (userRole !== 'admin') {
+            setError("Тільки адміністратори можуть створювати категорії");
+            return;
+        }
+
         setLoading(true);
         setError("");
+
+        const token = localStorage.getItem("token");
 
         try {
             const res = await fetch("http://localhost:5000/api/categories", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
                 },
                 body: JSON.stringify({ name, description }),
             });
@@ -46,6 +62,11 @@ function CategoryForm({ onCategoryAdded }) {
             setLoading(false);
         }
     };
+
+    // Якщо не адмін - не показуємо кнопку взагалі
+    if (userRole !== 'admin') {
+        return null;
+    }
 
     if (!showForm) {
         return (

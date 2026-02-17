@@ -14,7 +14,11 @@ export default function Login({ setToken }) {
         if (res.token) {
             setToken(res.token);
             setMessage("Успішний вхід");
+
+            // ВАЖЛИВО: Зберігаємо токен І роль
             localStorage.setItem("token", res.token);
+            localStorage.setItem("userRole", res.role || "user");  // ← ДОДАНО
+
         } else {
             setMessage(res.message);
         }

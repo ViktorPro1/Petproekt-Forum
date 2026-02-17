@@ -1,87 +1,94 @@
-const bcrypt = require("bcrypt");
+// controllers/authController.js
+// Оновлений контролер з роллю користувача
+
+const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const db = require("../config/db");
 
-// Реєстрація користувача
-const register = (req, res) => {
+const JWT_SECRET = process.env.JWT_SECRET || "your_secret_key";
+
+// Реєстрація
+exports.register = (req, res) => {
     const { username, email, password } = req.body;
 
     if (!username || !email || !password) {
-        return res.status(400).json({ message: "Заповніть всі поля" });
+        return res.status(400).json({ message: "Всі поля обов'язкові" });
     }
 
-    // Перевірка, чи вже існує email
-    const checkSql = "SELECT * FROM users WHERE email = ?";
-    db.query(checkSql, [email], (err, results) => {
+    // Хешування паролю
+    bcrypt.hash(password, 10, (err, hash) => {
         if (err) {
-            console.error("Помилка БД при перевірці email:", err);
-            return res.status(500).json({ message: err.sqlMessage });
+            return res.status(500).json({ message: "Помилка хешування паролю" });
         }
 
-        if (results.length > 0) {
-            return res.status(400).json({ message: "Email вже використовується" });
-        }
-
-        // Хешуємо пароль
-        bcrypt.hash(password, 10, (err, hash) => {
-            if (err) {
-                console.error("Помилка bcrypt:", err);
-                return res.status(500).json({ message: "Помилка bcrypt" });
-            }
-
-            // Додаємо користувача в БД
-            const sql = "INSERT INTO users (username, email, password) VALUES (?, ?, ?)";
-            db.query(sql, [username, email, hash], (err, result) => {
+        // Вставка користувача (role буде 'user' за замовчуванням)
+        db.query(
+            "INSERT INTO users (username, email, password) VALUES (?, ?, ?)",
+            [username, email, hash],
+            (err, result) => {
                 if (err) {
-                    console.error("Помилка БД при створенні користувача:", err);
-                    return res.status(500).json({ message: err.sqlMessage });
+                    console.error(err);
+                    if (err.code === 'ER_DUP_ENTRY') {
+                        return res.status(400).json({ message: "Email вже зареєстрований" });
+                    }
+                    return res.status(500).json({ message: "Помилка сервера" });
                 }
-
                 res.status(201).json({ message: "Користувача створено" });
-            });
-        });
+            }
+        );
     });
 };
 
-// Логін користувача
-const login = (req, res) => {
+// Логін
+exports.login = (req, res) => {
     const { email, password } = req.body;
 
     if (!email || !password) {
-        return res.status(400).json({ message: "Заповніть всі поля" });
+        return res.status(400).json({ message: "Email і пароль обов'язкові" });
     }
 
-    const sql = "SELECT * FROM users WHERE email = ?";
-    db.query(sql, [email], (err, results) => {
-        if (err) {
-            console.error("Помилка БД при логіні:", err);
-            return res.status(500).json({ message: err.sqlMessage });
-        }
-
-        if (results.length === 0) {
-            return res.status(400).json({ message: "Користувач не знайдений" });
-        }
-
-        const user = results[0];
-        bcrypt.compare(password, user.password, (err, isMatch) => {
+    // ВАЖЛИВО: Додали role до SELECT
+    db.query(
+        "SELECT id, email, password, role FROM users WHERE email = ?",
+        [email],
+        (err, results) => {
             if (err) {
-                console.error("Помилка bcrypt при логіні:", err);
-                return res.status(500).json({ message: "Помилка bcrypt" });
+                console.error(err);
+                return res.status(500).json({ message: "Помилка сервера" });
             }
 
-            if (!isMatch) {
-                return res.status(400).json({ message: "Невірний пароль" });
+            if (results.length === 0) {
+                return res.status(401).json({ message: "Невірний email або пароль" });
             }
 
-            const token = jwt.sign(
-                { id: user.id, role: user.role },
-                process.env.JWT_SECRET,
-                { expiresIn: "1h" }
-            );
+            const user = results[0];
 
-            res.json({ token, username: user.username, role: user.role });
-        });
-    });
+            // Перевірка паролю
+            bcrypt.compare(password, user.password, (err, isMatch) => {
+                if (err) {
+                    return res.status(500).json({ message: "Помилка сервера" });
+                }
+
+                if (!isMatch) {
+                    return res.status(401).json({ message: "Невірний email або пароль" });
+                }
+
+                // ВАЖЛИВО: Додали role до токену
+                const token = jwt.sign(
+                    {
+                        id: user.id,
+                        email: user.email,
+                        role: user.role  // ← ДОДАНО РОЛЬ
+                    },
+                    JWT_SECRET,
+                    { expiresIn: "24h" }
+                );
+
+                res.json({
+                    token,
+                    role: user.role  // ← ВІДПРАВЛЯЄМО РОЛЬ НА ФРОНТЕНД
+                });
+            });
+        }
+    );
 };
-
-module.exports = { register, login };
