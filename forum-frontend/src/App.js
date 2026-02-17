@@ -179,7 +179,13 @@ function App() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                 </svg>
               </div>
-              <h1 className="text-xl font-bold gradient-text hidden sm:block">DigitalFlow</h1>
+              <h1 className="text-xl font-bold gradient-text hidden sm:flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="16">
+                  <rect width="22" height="8" fill="#0057B7" />
+                  <rect y="8" width="22" height="8" fill="#FFD700" />
+                </svg>
+                DigitalFlow
+              </h1>
             </div>
           </div>
 
@@ -353,7 +359,7 @@ function App() {
               </div>
               <div>
                 <p className="font-bold text-[var(--text-primary)]">DigitalFlow</p>
-                <p className="text-xs text-[var(--text-tertiary)]">Українська спільнота спеціалістів з розробки, дизайну та маркетингу для обміну досвідом і професійного розвитку.</p>
+                <p className="text-xs text-[var(--text-tertiary)]">Українська спільнота з розробки, дизайну та маркетингу для обміну досвідом і професійного розвитку.</p>
               </div>
             </div>
 
