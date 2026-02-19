@@ -5,11 +5,41 @@ function PostList({ categoryId, reload, selectedPost, onSelectPost, token }) {
     const [loading, setLoading] = useState(false);
     const [userRole, setUserRole] = useState("user");
     const [deleteHovered, setDeleteHovered] = useState(null);
+    const [expandedPosts, setExpandedPosts] = useState({}); // Які пости розгорнуті
+    const [reactions, setReactions] = useState({}); // Реакції для кожного поста
+    const [userReactions, setUserReactions] = useState({}); // Реакції поточного користувача
 
     useEffect(() => {
         const role = localStorage.getItem("userRole") || "user";
         setUserRole(role);
     }, []);
+
+    // Завантажити реакції для поста (обернуто в useCallback)
+    const fetchPostReactions = useCallback(async (postId) => {
+        try {
+            const res = await fetch(`http://localhost:5000/api/reactions/post/${postId}`);
+            const data = await res.json();
+            setReactions(prev => ({ ...prev, [postId]: data }));
+        } catch (err) {
+            console.error("Error fetching reactions:", err);
+        }
+    }, []);
+
+    // Завантажити реакцію користувача (обернуто в useCallback)
+    const fetchUserReaction = useCallback(async (postId) => {
+        if (!token) return;
+        try {
+            const res = await fetch(`http://localhost:5000/api/reactions/post/${postId}/user`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            const data = await res.json();
+            if (data.reaction) {
+                setUserReactions(prev => ({ ...prev, [postId]: data.reaction }));
+            }
+        } catch (err) {
+            console.error("Error fetching user reaction:", err);
+        }
+    }, [token]);
 
     const fetchPosts = useCallback(async () => {
         if (!categoryId) return;
@@ -22,16 +52,51 @@ function PostList({ categoryId, reload, selectedPost, onSelectPost, token }) {
             const res = await fetch(url);
             const data = await res.json();
             setPosts(data);
+
+            // Завантажуємо реакції для кожного поста
+            data.forEach(post => {
+                fetchPostReactions(post.id);
+                fetchUserReaction(post.id);
+            });
         } catch (err) {
             console.error(err);
         } finally {
             setLoading(false);
         }
-    }, [categoryId]);
+    }, [categoryId, fetchPostReactions, fetchUserReaction]); // ← видалено token
 
     useEffect(() => {
         fetchPosts();
     }, [fetchPosts, reload]);
+
+    // Додати/змінити реакцію
+    const handleReaction = async (postId, reactionType, e) => {
+        e.stopPropagation();
+
+        if (!token) {
+            alert("Увійдіть щоб ставити реакції");
+            return;
+        }
+
+        try {
+            const res = await fetch("http://localhost:5000/api/reactions/post", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify({ post_id: postId, reaction_type: reactionType })
+            });
+
+            if (res.ok) {
+                // Оновлюємо реакції
+                await fetchPostReactions(postId);
+                await fetchUserReaction(postId);
+            }
+        } catch (err) {
+            console.error("Error adding reaction:", err);
+        }
+    };
 
     const handleDeletePost = async (postId, e) => {
         e.stopPropagation();
@@ -64,7 +129,19 @@ function PostList({ categoryId, reload, selectedPost, onSelectPost, token }) {
         }
     };
 
-    // Функція для отримання бейджа ролі
+    // Перемкнути розгортання поста
+    const toggleExpand = (postId, e) => {
+        e.stopPropagation();
+        setExpandedPosts(prev => ({ ...prev, [postId]: !prev[postId] }));
+    };
+
+    // Іконки реакцій
+    const reactionIcons = {
+        like: '👍',
+        heart: '❤️',
+        handshake: '🤝'
+    };
+
     const getRoleBadge = (role) => {
         if (role === 'admin') {
             return (
@@ -171,103 +248,146 @@ function PostList({ categoryId, reload, selectedPost, onSelectPost, token }) {
 
     return (
         <div className="space-y-3 animate-fade-in">
-            {posts.map((post, index) => (
-                <article
-                    key={post.id}
-                    onClick={() => onSelectPost(post.id)}
-                    style={{ animationDelay: `${index * 50}ms` }}
-                    className={`
-                        card-hover cursor-pointer p-5 animate-slide-up relative
-                        ${selectedPost === post.id
-                            ? "ring-2 ring-[var(--accent-primary)] bg-[var(--accent-primary)]/5"
-                            : ""
-                        }
-                    `}
-                >
-                    {canModerate && (
-                        <button
-                            onClick={(e) => handleDeletePost(post.id, e)}
-                            onMouseEnter={() => setDeleteHovered(post.id)}
-                            onMouseLeave={() => setDeleteHovered(null)}
-                            style={{
-                                position: 'absolute',
-                                top: '12px',
-                                right: '12px',
-                                width: '32px',
-                                height: '32px',
-                                borderRadius: '8px',
-                                background: deleteHovered === post.id ? '#fee' : '#fef2f2',
-                                border: '1px solid ' + (deleteHovered === post.id ? '#f87171' : '#fecaca'),
-                                color: deleteHovered === post.id ? '#dc2626' : '#ef4444',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s ease',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                zIndex: 10,
-                            }}
-                            title="Видалити пост"
-                        >
-                            <svg style={{ width: '16px', height: '16px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                        </button>
-                    )}
+            {posts.map((post, index) => {
+                const isExpanded = expandedPosts[post.id];
+                const postReactions = reactions[post.id] || { like: { count: 0 }, heart: { count: 0 }, handshake: { count: 0 } };
+                const userReaction = userReactions[post.id];
+                const contentLength = post.content.length;
+                const shouldShowExpand = contentLength > 300;
 
-                    <div className="flex items-start gap-3 mb-3">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--accent-primary)] to-[var(--accent-tertiary)] flex items-center justify-center text-white font-bold text-sm flex-shrink-0 shadow-sm">
-                            {post.username ? post.username.charAt(0).toUpperCase() : '?'}
-                        </div>
-
-                        <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                <span className="font-semibold text-[var(--text-primary)] text-sm">
-                                    {post.username || 'Анонім'}
-                                </span>
-                                {/* РОЛЬ БЕЙДЖ */}
-                                {getRoleBadge(post.role)}
-                                <span className="text-xs text-[var(--text-tertiary)]">•</span>
-                                <time className="text-xs text-[var(--text-tertiary)]">
-                                    {new Date(post.created_at).toLocaleDateString('uk-UA', {
-                                        month: 'short',
-                                        day: 'numeric',
-                                        hour: '2-digit',
-                                        minute: '2-digit'
-                                    })}
-                                </time>
-                            </div>
-                        </div>
-
-                        {selectedPost === post.id && (
-                            <span className="badge badge-primary">Вибрано</span>
+                return (
+                    <article
+                        key={post.id}
+                        onClick={() => onSelectPost(post.id)}
+                        style={{ animationDelay: `${index * 50}ms` }}
+                        className={`
+                            card-hover cursor-pointer p-5 animate-slide-up relative
+                            ${selectedPost === post.id
+                                ? "ring-2 ring-[var(--accent-primary)] bg-[var(--accent-primary)]/5"
+                                : ""
+                            }
+                        `}
+                    >
+                        {canModerate && (
+                            <button
+                                onClick={(e) => handleDeletePost(post.id, e)}
+                                onMouseEnter={() => setDeleteHovered(post.id)}
+                                onMouseLeave={() => setDeleteHovered(null)}
+                                style={{
+                                    position: 'absolute',
+                                    top: '12px',
+                                    right: '12px',
+                                    width: '32px',
+                                    height: '32px',
+                                    borderRadius: '8px',
+                                    background: deleteHovered === post.id ? '#fee' : '#fef2f2',
+                                    border: '1px solid ' + (deleteHovered === post.id ? '#f87171' : '#fecaca'),
+                                    color: deleteHovered === post.id ? '#dc2626' : '#ef4444',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    zIndex: 10,
+                                }}
+                                title="Видалити пост"
+                            >
+                                <svg style={{ width: '16px', height: '16px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                            </button>
                         )}
-                    </div>
 
-                    <div className="space-y-2">
-                        <h3 className="font-bold text-[var(--text-primary)] text-lg leading-snug">
-                            {post.title}
-                        </h3>
-                        <p className="text-[var(--text-secondary)] leading-relaxed line-clamp-3">
-                            {post.content}
-                        </p>
-                    </div>
+                        <div className="flex items-start gap-3 mb-3">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--accent-primary)] to-[var(--accent-tertiary)] flex items-center justify-center text-white font-bold text-sm flex-shrink-0 shadow-sm">
+                                {post.username ? post.username.charAt(0).toUpperCase() : '?'}
+                            </div>
 
-                    <div className="flex items-center gap-4 mt-4 pt-3 border-t border-[var(--border-secondary)]">
-                        <button
-                            className="btn-ghost !p-0 text-xs flex items-center gap-1.5 text-[var(--text-tertiary)] hover:text-[var(--accent-primary)]"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                onSelectPost(post.id);
-                            }}
-                        >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                            </svg>
-                            Коментарі
-                        </button>
-                    </div>
-                </article>
-            ))}
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                    <span className="font-semibold text-[var(--text-primary)] text-sm">
+                                        {post.username || 'Анонім'}
+                                    </span>
+                                    {getRoleBadge(post.role)}
+                                    <span className="text-xs text-[var(--text-tertiary)]">•</span>
+                                    <time className="text-xs text-[var(--text-tertiary)]">
+                                        {new Date(post.created_at).toLocaleDateString('uk-UA', {
+                                            month: 'short',
+                                            day: 'numeric',
+                                            hour: '2-digit',
+                                            minute: '2-digit'
+                                        })}
+                                    </time>
+                                </div>
+                            </div>
+
+                            {selectedPost === post.id && (
+                                <span className="badge badge-primary">Вибрано</span>
+                            )}
+                        </div>
+
+                        <div className="space-y-2">
+                            <h3 className="font-bold text-[var(--text-primary)] text-lg leading-snug">
+                                {post.title}
+                            </h3>
+                            <p className={`text-[var(--text-secondary)] leading-relaxed ${!isExpanded && shouldShowExpand ? 'line-clamp-3' : ''}`}>
+                                {post.content}
+                            </p>
+                            {shouldShowExpand && (
+                                <button
+                                    onClick={(e) => toggleExpand(post.id, e)}
+                                    className="text-sm text-[var(--accent-primary)] hover:underline font-medium"
+                                >
+                                    {isExpanded ? 'Показати менше' : 'Показати більше'}
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Реакції */}
+                        <div className="flex items-center gap-4 mt-4 pt-3 border-t border-[var(--border-secondary)]">
+                            {/* Кнопки реакцій */}
+                            <div className="flex items-center gap-2">
+                                {Object.entries(reactionIcons).map(([type, icon]) => {
+                                    const count = postReactions[type]?.count || 0;
+                                    const isActive = userReaction === type;
+
+                                    return (
+                                        <button
+                                            key={type}
+                                            onClick={(e) => handleReaction(post.id, type, e)}
+                                            className="flex items-center gap-1 px-2 py-1 rounded-lg transition-all hover:bg-[var(--bg-tertiary)]"
+                                            style={{
+                                                background: isActive ? 'var(--accent-primary)' : 'transparent',
+                                                color: isActive ? 'white' : 'var(--text-secondary)',
+                                            }}
+                                            title={postReactions[type]?.users?.join(', ') || ''}
+                                        >
+                                            <span className="text-base">{icon}</span>
+                                            {count > 0 && (
+                                                <span className="text-xs font-semibold">{count}</span>
+                                            )}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+
+                            {/* Коментарі */}
+                            <button
+                                className="btn-ghost !p-0 text-xs flex items-center gap-1.5 text-[var(--text-tertiary)] hover:text-[var(--accent-primary)] ml-auto"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onSelectPost(post.id);
+                                }}
+                            >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                                </svg>
+                                Коментарі
+                            </button>
+                        </div>
+                    </article>
+                );
+            })}
         </div>
     );
 }

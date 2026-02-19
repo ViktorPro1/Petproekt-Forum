@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 function CommentList({ postId, reload, token }) {
     const [comments, setComments] = useState([]);
@@ -6,11 +6,40 @@ function CommentList({ postId, reload, token }) {
     const [error, setError] = useState("");
     const [userRole, setUserRole] = useState("user");
     const [deleteHovered, setDeleteHovered] = useState(null);
+    const [reactions, setReactions] = useState({}); // Реакції для кожного коментаря
+    const [userReactions, setUserReactions] = useState({}); // Реакції користувача
 
     useEffect(() => {
         const role = localStorage.getItem("userRole") || "user";
         setUserRole(role);
     }, []);
+
+    // Завантажити реакції для коментаря (обернуто в useCallback)
+    const fetchCommentReactions = useCallback(async (commentId) => {
+        try {
+            const res = await fetch(`http://localhost:5000/api/reactions/comment/${commentId}`);
+            const data = await res.json();
+            setReactions(prev => ({ ...prev, [commentId]: data }));
+        } catch (err) {
+            console.error("Error fetching reactions:", err);
+        }
+    }, []);
+
+    // Завантажити реакцію користувача (обернуто в useCallback)
+    const fetchUserReaction = useCallback(async (commentId) => {
+        if (!token) return;
+        try {
+            const res = await fetch(`http://localhost:5000/api/reactions/comment/${commentId}/user`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            const data = await res.json();
+            if (data.reaction) {
+                setUserReactions(prev => ({ ...prev, [commentId]: data.reaction }));
+            }
+        } catch (err) {
+            console.error("Error fetching user reaction:", err);
+        }
+    }, [token]);
 
     useEffect(() => {
         const fetchComments = async () => {
@@ -25,6 +54,12 @@ function CommentList({ postId, reload, token }) {
                 } else {
                     setComments(data);
                     setError("");
+
+                    // Завантажуємо реакції для кожного коментаря
+                    data.forEach(comment => {
+                        fetchCommentReactions(comment.id);
+                        fetchUserReaction(comment.id);
+                    });
                 }
             } catch (err) {
                 console.error("Помилка при запиті до сервера:", err);
@@ -36,7 +71,36 @@ function CommentList({ postId, reload, token }) {
         };
 
         fetchComments();
-    }, [postId, reload]);
+    }, [postId, reload, token, fetchCommentReactions, fetchUserReaction]);
+
+    // Додати/змінити реакцію
+    const handleReaction = async (commentId, reactionType, e) => {
+        e.stopPropagation();
+
+        if (!token) {
+            alert("Увійдіть щоб ставити реакції");
+            return;
+        }
+
+        try {
+            const res = await fetch("http://localhost:5000/api/reactions/comment", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify({ comment_id: commentId, reaction_type: reactionType })
+            });
+
+            if (res.ok) {
+                // Оновлюємо реакції
+                await fetchCommentReactions(commentId);
+                await fetchUserReaction(commentId);
+            }
+        } catch (err) {
+            console.error("Error adding reaction:", err);
+        }
+    };
 
     const handleDeleteComment = async (commentId, e) => {
         e.stopPropagation();
@@ -66,7 +130,13 @@ function CommentList({ postId, reload, token }) {
         }
     };
 
-    // Функція для отримання бейджа ролі
+    // Іконки реакцій
+    const reactionIcons = {
+        like: '👍',
+        heart: '❤️',
+        handshake: '🤝'
+    };
+
     const getRoleBadge = (role) => {
         if (role === 'admin') {
             return (
@@ -163,65 +233,97 @@ function CommentList({ postId, reload, token }) {
             )}
 
             <ul className="space-y-3">
-                {comments.map((c) => (
-                    <li
-                        key={c.id}
-                        className="flex gap-3 p-3 rounded-xl bg-[var(--bg-tertiary)]/50 hover:bg-[var(--bg-tertiary)] transition-colors relative"
-                    >
-                        {canModerate && (
-                            <button
-                                onClick={(e) => handleDeleteComment(c.id, e)}
-                                onMouseEnter={() => setDeleteHovered(c.id)}
-                                onMouseLeave={() => setDeleteHovered(null)}
-                                style={{
-                                    position: 'absolute',
-                                    top: '8px',
-                                    right: '8px',
-                                    width: '28px',
-                                    height: '28px',
-                                    borderRadius: '6px',
-                                    background: deleteHovered === c.id ? '#fee' : '#fef2f2',
-                                    border: '1px solid ' + (deleteHovered === c.id ? '#f87171' : '#fecaca'),
-                                    color: deleteHovered === c.id ? '#dc2626' : '#ef4444',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.2s ease',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                }}
-                                title="Видалити коментар"
-                            >
-                                <svg style={{ width: '14px', height: '14px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                            </button>
-                        )}
+                {comments.map((c) => {
+                    const commentReactions = reactions[c.id] || { like: { count: 0 }, heart: { count: 0 }, handshake: { count: 0 } };
+                    const userReaction = userReactions[c.id];
 
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[var(--accent-primary)] to-[var(--accent-tertiary)] flex items-center justify-center text-white font-bold text-xs flex-shrink-0 shadow-sm">
-                            {c.username ? c.username.charAt(0).toUpperCase() : '?'}
-                        </div>
-                        <div className="flex-1 min-w-0" style={{ paddingRight: canModerate ? '36px' : '0' }}>
-                            <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                <span className="font-semibold text-[var(--text-primary)] text-sm">
-                                    {c.username || 'Анонім'}
-                                </span>
-                                {/* РОЛЬ БЕЙДЖ */}
-                                {getRoleBadge(c.role)}
-                                <span className="text-xs text-[var(--text-tertiary)]">
-                                    {new Date(c.created_at).toLocaleDateString('uk-UA', {
-                                        month: 'short',
-                                        day: 'numeric',
-                                        hour: '2-digit',
-                                        minute: '2-digit'
-                                    })}
-                                </span>
+                    return (
+                        <li
+                            key={c.id}
+                            className="p-3 rounded-xl bg-[var(--bg-tertiary)]/50 hover:bg-[var(--bg-tertiary)] transition-colors relative"
+                        >
+                            {canModerate && (
+                                <button
+                                    onClick={(e) => handleDeleteComment(c.id, e)}
+                                    onMouseEnter={() => setDeleteHovered(c.id)}
+                                    onMouseLeave={() => setDeleteHovered(null)}
+                                    style={{
+                                        position: 'absolute',
+                                        top: '8px',
+                                        right: '8px',
+                                        width: '28px',
+                                        height: '28px',
+                                        borderRadius: '6px',
+                                        background: deleteHovered === c.id ? '#fee' : '#fef2f2',
+                                        border: '1px solid ' + (deleteHovered === c.id ? '#f87171' : '#fecaca'),
+                                        color: deleteHovered === c.id ? '#dc2626' : '#ef4444',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s ease',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                    }}
+                                    title="Видалити коментар"
+                                >
+                                    <svg style={{ width: '14px', height: '14px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                </button>
+                            )}
+
+                            <div className="flex gap-3">
+                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[var(--accent-primary)] to-[var(--accent-tertiary)] flex items-center justify-center text-white font-bold text-xs flex-shrink-0 shadow-sm">
+                                    {c.username ? c.username.charAt(0).toUpperCase() : '?'}
+                                </div>
+                                <div className="flex-1 min-w-0" style={{ paddingRight: canModerate ? '36px' : '0' }}>
+                                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                        <span className="font-semibold text-[var(--text-primary)] text-sm">
+                                            {c.username || 'Анонім'}
+                                        </span>
+                                        {getRoleBadge(c.role)}
+                                        <span className="text-xs text-[var(--text-tertiary)]">
+                                            {new Date(c.created_at).toLocaleDateString('uk-UA', {
+                                                month: 'short',
+                                                day: 'numeric',
+                                                hour: '2-digit',
+                                                minute: '2-digit'
+                                            })}
+                                        </span>
+                                    </div>
+                                    <p className="text-sm text-[var(--text-secondary)] leading-relaxed mb-2">
+                                        {c.content}
+                                    </p>
+
+                                    {/* Реакції */}
+                                    <div className="flex items-center gap-1">
+                                        {Object.entries(reactionIcons).map(([type, icon]) => {
+                                            const count = commentReactions[type]?.count || 0;
+                                            const isActive = userReaction === type;
+
+                                            return (
+                                                <button
+                                                    key={type}
+                                                    onClick={(e) => handleReaction(c.id, type, e)}
+                                                    className="flex items-center gap-1 px-1.5 py-0.5 rounded-md transition-all hover:bg-[var(--bg-secondary)]"
+                                                    style={{
+                                                        background: isActive ? 'var(--accent-primary)' : 'transparent',
+                                                        color: isActive ? 'white' : 'var(--text-secondary)',
+                                                    }}
+                                                    title={commentReactions[type]?.users?.join(', ') || ''}
+                                                >
+                                                    <span className="text-sm">{icon}</span>
+                                                    {count > 0 && (
+                                                        <span className="text-xs font-semibold">{count}</span>
+                                                    )}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
                             </div>
-                            <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
-                                {c.content}
-                            </p>
-                        </div>
-                    </li>
-                ))}
+                        </li>
+                    );
+                })}
             </ul>
         </div>
     );

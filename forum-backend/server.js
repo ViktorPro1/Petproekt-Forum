@@ -13,11 +13,13 @@ const authRoutes = require("./routes/auth");
 const categoryRoutes = require("./routes/categories");
 const postRoutes = require("./routes/posts");
 const commentRoutes = require("./routes/comments");
+const reactionsRoutes = require("./routes/reactions");
 
 app.use("/api/categories", categoryRoutes);
 app.use("/api/posts", postRoutes);
 app.use("/api/comments", commentRoutes);
 app.use("/api/auth", authRoutes);
+app.use("/api/reactions", reactionsRoutes);
 
 // Тестовий маршрут
 app.get("/", (req, res) => {
